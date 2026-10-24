@@ -57,7 +57,7 @@ grammai is independent and is not affiliated with Grammarly, LanguageTool, Anthr
 - Support: https://github.com/zilvestro/grammai/issues
 - Privacy policy: https://github.com/zilvestro/grammai/blob/main/PRIVACY.md
 - Price: Free. Optional AI uses the user's own provider account; provider charges and limits may apply.
-- Chrome Web Store URL: pending first upload. Replace the README's marked placeholder after the listing URL is assigned.
+- Chrome Web Store URL: https://chromewebstore.google.com/detail/grammai/coafchipjppaininmkchbiodpcdkkakc
 
 ## Visual assets
 

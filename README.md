@@ -4,8 +4,7 @@
 <h1 align="center">grammai</h1>
 <p align="center"><strong>AI writing assistance. Free &amp; open source.</strong></p>
 <p align="center">Offline English, German and Romanian grammar checks, with rewrites and translation through your own Claude Code or Codex account.</p>
-<p align="center"><a href="#chrome-web-store"><img src="docs/assets/chrome-button.svg" width="300" height="48" alt="Get grammai for Chrome — coming soon" /></a></p>
-<!-- Replace #chrome-web-store above with the real listing URL after the first upload. -->
+<p align="center"><a href="https://chromewebstore.google.com/detail/grammai/coafchipjppaininmkchbiodpcdkkakc"><img src="docs/assets/chrome-button.svg" width="300" height="48" alt="Get grammai for Chrome" /></a></p>
 <p align="center"><a href="https://affonso.io"><img src="public/brand/affonso-mark.svg" width="24" height="24" alt="Affonso logo" /></a><br/>Sponsored by <a href="https://affonso.io"><strong>Affonso</strong></a></p>
 <p align="center"><a href="#installation">Get started</a> · <a href="docs/ai-setup.md">Connect your AI</a> · <a href="CONTRIBUTING.md">Contribute</a> · <a href="LICENSE">GPL 3.0</a></p>
 
@@ -39,9 +38,11 @@ Screenshots use sample drafts in a separate browser profile. The rewrite shown w
 ## Installation
 
 <a id="chrome-web-store"></a>
-**Chrome Web Store — coming soon.** The button above is a placeholder until the first listing is available. Store users will install the extension once; ordinary grammar checks need no additional setup.
+Install grammai from the [Chrome Web Store](https://chromewebstore.google.com/detail/grammai/coafchipjppaininmkchbiodpcdkkakc). Ordinary grammar checks need no additional setup.
 
-To try the current source build:
+### Build from source
+
+To build and load the extension for development:
 
 ```sh
 npm ci

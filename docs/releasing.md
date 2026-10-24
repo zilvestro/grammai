@@ -52,7 +52,7 @@ Copy the English listing and permission explanations from [Store listing](store/
 
 `scripts/capture-listing.mjs` reproduces genuine screenshots in an isolated macOS Helium profile. It requires a locally installed, signed-in Codex or Claude Code CLI for the rewrite image and consumes one normal AI request using sample text. It never captures the live personal browser. The promotional tile is code-native HTML in `docs/store/promo.html`.
 
-Use the public policy URL https://github.com/zilvestro/grammai/blob/main/PRIVACY.md. After the first Store upload assigns an ID and listing URL, replace the README button placeholder, remove its coming-soon copy and add the actual Store URL to the listing reference. Do not reuse a local development extension ID.
+Use the public policy URL https://github.com/zilvestro/grammai/blob/main/PRIVACY.md. The Chrome Web Store listing is https://chromewebstore.google.com/detail/grammai/coafchipjppaininmkchbiodpcdkkakc. Do not reuse a local development extension ID.
 
 ## Before submitting for review
 
