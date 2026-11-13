@@ -191,25 +191,3 @@ chrome.tabs.onRemoved.addListener((id) => snapshots.delete(id));
 chrome.tabs.onUpdated.addListener((id, info) => {
   if (info.status === "loading") snapshots.delete(id);
 });
-chrome.commands.onCommand.addListener(async (command) => {
-  if (
-    !["open-assistant", "translate-selection", "rewrite-selection"].includes(
-      command,
-    )
-  )
-    return;
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (tab?.id)
-    await chrome.tabs
-      .sendMessage(
-        tab.id,
-        command === "open-assistant"
-          ? { type: "TOGGLE_PANEL" }
-          : {
-              type: "QUICK_ACTION",
-              action:
-                command === "translate-selection" ? "translate" : "rewrite",
-            },
-      )
-      .catch(() => {});
-});

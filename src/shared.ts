@@ -1,5 +1,10 @@
 import type { Category, Issue } from "./engine";
 import type { LanguageMode, WritingLanguage } from "./language";
+import {
+  defaultShortcuts,
+  sanitizeShortcuts,
+  type Shortcuts,
+} from "./shortcuts";
 export interface CustomPrompt {
   id: string;
   name: string;
@@ -18,6 +23,7 @@ export interface Settings {
   categories: Record<Category, boolean>;
   aiProvider: "auto" | "claude" | "codex";
   aiModel: string;
+  shortcuts: Shortcuts;
 }
 export const DEFAULT_SETTINGS: Settings = {
   theme: "system",
@@ -25,6 +31,7 @@ export const DEFAULT_SETTINGS: Settings = {
   enabled: true,
   aiProvider: "auto",
   aiModel: "",
+  shortcuts: defaultShortcuts(),
   disabledSites: [],
   dictionary: [],
   dialect: "en-US",
@@ -44,6 +51,7 @@ export async function getSettings(): Promise<Settings> {
     ...DEFAULT_SETTINGS,
     ...settings,
     categories: { ...DEFAULT_SETTINGS.categories, ...settings?.categories },
+    shortcuts: sanitizeShortcuts(settings?.shortcuts),
   };
 }
 export async function updateSettings(

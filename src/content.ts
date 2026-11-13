@@ -13,7 +13,11 @@ import {
 } from "./shared";
 import { styles } from "./content-style";
 import { themeStyles, resolvedTheme } from "./theme";
-import { shortcutLabels, shortcutAction } from "./shortcuts";
+import {
+  SHORTCUT_ACTIONS,
+  formatCombo,
+  shortcutForEvent,
+} from "./shortcuts";
 import { editorText, editorRange, selectedOffsets } from "./editor-text";
 import { rewritePane, translationPane, rewriteStyles } from "./rewrite-ui";
 import type { RewriteView, RewriteStyle } from "./shared";
@@ -787,9 +791,12 @@ function assistantFooter() {
 function shortcutHelp() {
   const help = el("details", "shortcut-help");
   help.append(el("summary", "", "Keyboard shortcuts"));
-  for (const [label, keys] of shortcutLabels()) {
+  for (const action of SHORTCUT_ACTIONS) {
     const row = el("div", "shortcut-row");
-    row.append(el("span", "", label), el("kbd", "", keys));
+    row.append(
+      el("span", "", action.label),
+      el("kbd", "", formatCombo(settings.shortcuts[action.id])),
+    );
     help.append(row);
   }
   return help;
@@ -1459,8 +1466,8 @@ function positionSelectionActions() {
     });
     rewrite.ariaLabel = "Rewrite";
     translate.ariaLabel = "Translate";
-    rewrite.append(el("kbd", "", shortcutLabels()[1][1]));
-    translate.append(el("kbd", "", shortcutLabels()[0][1]));
+    rewrite.append(el("kbd", "", formatCombo(settings.shortcuts.rewrite)));
+        translate.append(el("kbd", "", formatCombo(settings.shortcuts.translate)));
     selectionActions.append(rewrite, translate);
   }
   const width = selectionActions.offsetWidth;
@@ -1776,14 +1783,26 @@ async function start() {
         ownControl && shadow.activeElement?.closest(".prompt-manager");
       const field = fieldFrom(event.target);
       const action =
-        !editingPrompt && !composing && (field || ownControl)
-          ? shortcutAction(event)
-          : null;
+              !editingPrompt && !composing && (field || ownControl)
+                ? shortcutForEvent(event, settings.shortcuts)
+                : null;
       if (action && session && enabled() && isField(session.editor)) {
         if (field && field !== session.editor) activate(field);
         event.preventDefault();
-        event.stopPropagation();
-        if (action === "translate") {
+                event.stopPropagation();
+                if (action === "close") {
+                  if (panelOpen) {
+                    panelOpen = false;
+                    render();
+                    position();
+                    session?.editor.focus();
+                  } else {
+                    selectionDismissed = true;
+                    selectionActions.replaceChildren();
+                  }
+                  return;
+                }
+                if (action === "translate") {
           rememberSelection();
           void startRewrite("translate-auto");
         }
@@ -1844,24 +1863,15 @@ async function start() {
       )
         selectionDismissed = false;
       if (
-        fieldFrom(event.target) &&
-        (event.key.length === 1 ||
-          ["Backspace", "Delete", "Enter"].includes(event.key))
-      ) {
-        clearWordHover();
-      }
-      if (event.key === "Escape" && panelOpen) {
-        panelOpen = false;
-        render();
-        position();
-        session?.editor.focus();
-      } else if (event.key === "Escape") {
-        selectionDismissed = true;
-        selectionActions.replaceChildren();
-      }
-    },
-    true,
-  );
+              fieldFrom(event.target) &&
+              (event.key.length === 1 ||
+                ["Backspace", "Delete", "Enter"].includes(event.key))
+            ) {
+              clearWordHover();
+            }
+          },
+          true,
+        );
   listen(document, "keyup", (event) => {
     if (
       fieldFrom(event.target) &&
@@ -1894,49 +1904,8 @@ async function start() {
       respond({ ok: !!session });
       return;
     }
-    if (m.type === "QUICK_ACTION") {
-      if (
-        document.hasFocus() &&
-        !shadow.activeElement?.closest(".prompt-manager") &&
-        session &&
-        (fieldFrom(document.activeElement) === session.editor ||
-          document.activeElement === host) &&
-        isField(session.editor) &&
-        enabled()
-      ) {
-        rememberSelection();
-        if (m.action === "translate") void startRewrite("translate-auto");
-        else if (m.action === "rewrite") {
-          panelOpen = true;
-          compact = false;
-          panelMode = "rewrite";
-          render();
-          position();
-          shadow.querySelector<HTMLElement>(".rewrite-choice")?.focus();
-        }
-      }
-      respond({ ok: !!session });
-      return;
-    }
-    if (m.type === "TOGGLE_PANEL") {
-      if (
-        document.hasFocus() &&
-        !shadow.activeElement?.closest(".prompt-manager") &&
-        session &&
-        (fieldFrom(document.activeElement) === session.editor ||
-          document.activeElement === host) &&
-        isField(session.editor) &&
-        enabled()
-      ) {
-        panelOpen = !panelOpen;
-        render();
-        position();
-      }
-      respond({ ok: !!session });
-      return;
-    }
     if (
-      ![
+          ![
         "APPLY",
         "DISMISS",
         "FOCUS_ISSUE",

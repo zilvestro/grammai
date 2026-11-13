@@ -1,5 +1,11 @@
 import { feedbackLink } from "./support";
-import { shortcutLabels } from "./shortcuts";
+import {
+  SHORTCUT_ACTIONS,
+  comboFromEvent,
+  defaultShortcuts,
+  formatCombo,
+  normalizeCombo,
+} from "./shortcuts";
 import { initializePageTheme } from "./theme";
 import { promptManager } from "./prompt-manager";
 import { rewriteStyles } from "./rewrite-ui";
@@ -27,6 +33,8 @@ const dictionaryList =
   document.querySelector<HTMLUListElement>("#dictionary-list")!;
 const sitesList = document.querySelector<HTMLUListElement>("#sites-list")!;
 const status = document.querySelector<HTMLElement>("#status")!;
+const shortcutRoot =
+  document.querySelector<HTMLElement>("#keyboard-shortcuts")!;
 let settings: Settings;
 let saveQueue = Promise.resolve();
 let statusTimer: ReturnType<typeof setTimeout> | undefined;
@@ -120,9 +128,10 @@ function render(): void {
       ),
     );
     item.append(label, resume);
-    sitesList.append(item);
-  }
-}
+        sitesList.append(item);
+      }
+      renderShortcuts();
+    }
 
 enabled.addEventListener("change", () => save({ enabled: enabled.checked }));
 dialect.addEventListener("change", () =>
@@ -261,6 +270,78 @@ dictionaryForm.addEventListener("submit", (event) => {
   dictionaryWord.focus();
 });
 
+function renderShortcuts(): void {
+  for (const action of SHORTCUT_ACTIONS) {
+    const input = shortcutRoot.querySelector<HTMLInputElement>(
+      `.shortcut-input[data-shortcut="${action.id}"]`,
+    );
+    if (input && document.activeElement !== input) {
+      input.value = formatCombo(settings.shortcuts[action.id]);
+    }
+  }
+}
+
+function buildShortcuts(): void {
+  shortcutRoot.replaceChildren();
+  for (const action of SHORTCUT_ACTIONS) {
+    const row = document.createElement("div");
+    row.className = "shortcut-row";
+    const label = document.createElement("span");
+    label.textContent = action.label;
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "shortcut-input";
+    input.dataset.shortcut = action.id;
+    input.readOnly = true;
+    input.value = formatCombo(settings.shortcuts[action.id]);
+    input.setAttribute("aria-label", `${action.label} shortcut`);
+    input.addEventListener("focus", () => {
+      input.value = "";
+      showStatus(`Press the keys for ${action.label}. Click away to cancel.`);
+    });
+    input.addEventListener("blur", () => {
+      input.value = formatCombo(settings.shortcuts[action.id]);
+    });
+    input.addEventListener("keydown", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      // Escape with a modifier cancels capture; plain Escape is itself a valid combo.
+      if (
+        event.key === "Escape" &&
+        (event.ctrlKey || event.shiftKey || event.altKey || event.metaKey)
+      ) {
+        input.blur();
+        return;
+      }
+      const combo = comboFromEvent(event);
+      if (!combo) return;
+      const clash = SHORTCUT_ACTIONS.find(
+        (entry) =>
+          entry.id !== action.id &&
+          normalizeCombo(settings.shortcuts[entry.id]) === combo,
+      );
+      if (clash) {
+        showStatus(`That shortcut is already used by ${clash.label}.`, true);
+        return;
+      }
+      save({ shortcuts: { ...settings.shortcuts, [action.id]: combo } });
+      input.value = formatCombo(combo);
+      input.blur();
+    });
+    row.append(label, input);
+    shortcutRoot.append(row);
+  }
+  const reset = document.createElement("button");
+    reset.type = "button";
+    reset.className = "button";
+    reset.id = "reset-shortcuts";
+    reset.textContent = "Reset to defaults";
+  reset.addEventListener("click", () => {
+    save({ shortcuts: defaultShortcuts() }, "Shortcuts reset to defaults.");
+  });
+  shortcutRoot.append(reset);
+}
+
 async function initialize(): Promise<void> {
   const controls = [
     ...document.querySelectorAll<
@@ -272,8 +353,9 @@ async function initialize(): Promise<void> {
   });
   try {
     settings = await getSettings();
-    render();
-    controls.forEach((control) => {
+        render();
+        buildShortcuts();
+        controls.forEach((control) => {
       control.disabled = false;
     });
   } catch {
@@ -295,19 +377,11 @@ document
       theme: (event.target as HTMLSelectElement).value as Settings["theme"],
     }),
   );
-for (const [label, keys] of shortcutLabels()) {
-  const row = document.createElement("div");
-  row.className = "shortcut-row";
-  const text = document.createElement("span");
-  text.textContent = label;
-  const key = document.createElement("kbd");
-  key.textContent = keys;
-  row.append(text, key);
-  document.querySelector("#keyboard-shortcuts")!.append(row);
-}
-
 chrome.storage.onChanged.addListener(async (changes) => {
-  if (changes.settings) settings = await getSettings();
+  if (changes.settings) {
+    settings = await getSettings();
+    renderShortcuts();
+  }
 });
 
 document.querySelector("#feedback-link")!.append(feedbackLink());

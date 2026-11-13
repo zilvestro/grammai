@@ -300,7 +300,7 @@ try {
   );
   assert.equal(
     await options.locator("#keyboard-shortcuts .shortcut-row").count(),
-    8,
+        9,
   );
   pass(
     "the provided logo loads in web-page shadow DOM and extension pages; branding and shortcut help match grammai",

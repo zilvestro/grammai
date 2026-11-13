@@ -735,6 +735,12 @@ button:active {
   font: 11px/1.5 inherit;
   color: var(--muted);
 }
+.shortcut-input {
+  width: 160px;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+}
 .shortcuts-note {
   font-size: 11px;
   color: var(--muted);
