@@ -40,29 +40,6 @@
       "match_about_blank": true
     }
   ],
-  "commands": {
-    "open-assistant": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+Y",
-        "mac": "Command+Shift+Y"
-      },
-      "description": "Open or close grammai for the focused text field"
-    },
-    "translate-selection": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+L",
-        "mac": "Command+Shift+L"
-      },
-      "description": "Translate selected text with grammai"
-    },
-    "rewrite-selection": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+K",
-        "mac": "Command+Shift+K"
-      },
-      "description": "Rewrite selected text with grammai"
-    }
-  },
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self'"
   },
