@@ -61,10 +61,10 @@
   "license": "GPL-3.0-only",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zilvestro/grammai.git"
+    "url": "https://github.com/R3vll/grammai.git"
   },
-  "homepage": "https://github.com/zilvestro/grammai",
+  "homepage": "https://github.com/R3vll/grammai",
   "bugs": {
-    "url": "https://github.com/zilvestro/grammai/issues"
+    "url": "https://github.com/R3vll/grammai/issues"
   }
 }
