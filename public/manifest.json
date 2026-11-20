@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "minimum_chrome_version": "120",
   "name": "grammai",
-  "version": "0.6.6",
+  "version": "0.6.7",
   "description": "Free grammar checking. Bring your own Claude Code or Codex for AI rewrites, translation and context checks.",
   "permissions": [
     "storage",
