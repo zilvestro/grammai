@@ -291,7 +291,10 @@ try {
   );
   const manifest = await worker.evaluate(() => chrome.runtime.getManifest());
   assert.equal(manifest.name, "grammai");
-  assert.equal(manifest.version, "0.6.1");
+  assert.equal(
+    manifest.version,
+    JSON.parse(await readFile("package.json", "utf8")).version,
+  );
   assert.equal(manifest.icons["128"], "icons/128.png");
   assert(
     await options
