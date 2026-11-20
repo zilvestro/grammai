@@ -1,5 +1,23 @@
 # Prepare a release
 
+## Automated release
+
+`.github/workflows/release.yml` releases whenever `main` carries a version that has no `v*` tag yet:
+
+```sh
+npm version patch --no-git-tag-version   # also updates public/manifest.json
+```
+
+Commit that in a pull request and merge it. The workflow then type-checks, runs the unit tests, builds, packages the Store and source ZIPs, uploads the Store ZIP and submits it for review, and publishes the GitHub release (which creates the tag). Chrome updates installed copies on its own once review passes. Pushes that do not change the version do nothing. The browser tests below are not part of the workflow; run them before merging a version bump.
+
+One-time setup:
+
+1. In the [Google Cloud Console](https://console.cloud.google.com), create or pick a project, enable the **Chrome Web Store API**, create a service account (no roles needed) and a JSON key for it.
+2. In the [Developer Dashboard](https://chrome.google.com/webstore/devconsole/), add the service account's email under **Account**. A publisher can have one service account.
+3. Add two repository secrets under **Settings → Secrets and variables → Actions**: `CWS_SERVICE_ACCOUNT_KEY` (the whole JSON key file) and `CWS_PUBLISHER_ID` (Dashboard → **Publisher → Settings**).
+
+The workflow stops before building if a secret is missing. To upload by hand with the same credentials: `node scripts/publish-store.mjs ZIP_PATH` (add `--upload-only` to leave it as a draft). The manual steps below remain valid and describe what the workflow does.
+
 ## Build and check
 
 Use Node.js 22+. Install the locked dependencies, run type checking and relevant tests, then build:
