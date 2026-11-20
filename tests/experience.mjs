@@ -89,7 +89,7 @@ try {
     name: "Writing editor",
     exact: true,
   });
-  const q = page.locator("quill-assistant");
+  const q = page.locator("[data-grammai-root]");
   await draft.fill("Opening. This passage needs a new voice. Closing.");
   await expect(q).toBeAttached();
   await draft.evaluate((node) => {

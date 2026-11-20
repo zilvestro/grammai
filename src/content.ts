@@ -126,7 +126,10 @@ function observe<T extends MutationObserver | ResizeObserver>(observer: T): T {
 function notify(message: unknown) {
   void context.call(() => chrome.runtime.sendMessage(message)).catch(() => {});
 }
-const host = document.createElement("quill-assistant");
+// A plain element: pages commonly hide or cloak everything matching
+// :not(:defined), which an unregistered custom element name always does.
+const host = document.createElement("div");
+host.setAttribute("data-grammai-root", "");
 const shadow = host.attachShadow({ mode: "open" });
 const style = el("style");
 style.textContent = themeStyles + styles + rewriteStyles;
@@ -146,14 +149,67 @@ mirror.style.cssText =
   "position:fixed;visibility:hidden;pointer-events:none;white-space:pre-wrap;overflow:hidden;";
 shadow.append(mirror);
 function ensureHost() {
-  if (!host.isConnected)
-    (document.body || document.documentElement).append(host);
+  // Modal dialogs, popovers and fullscreen elements paint above every z-index
+  // and can make the rest of the page inert, so the overlay must live inside.
+  const parent =
+    session?.editor.closest("dialog:modal,:popover-open,:fullscreen") ??
+    document.body ??
+    document.documentElement;
+  if (host.parentNode !== parent) parent.append(host);
+}
+/** The innermost event target, including one inside an open shadow root. */
+function origin(event: Event): EventTarget | null {
+  return event.composedPath()[0] ?? event.target;
+}
+/** The focused element across open shadow roots; our own host stays opaque. */
+function focused(): Element | null {
+  let active = document.activeElement;
+  while (active && active !== host && active.shadowRoot?.activeElement)
+    active = active.shadowRoot.activeElement;
+  return active;
+}
+function hitAt(x: number, y: number): Element | null {
+  let hit = document.elementFromPoint(x, y);
+  for (;;) {
+    const inner =
+      hit && hit !== host ? hit.shadowRoot?.elementFromPoint(x, y) : null;
+    if (!inner || inner === hit) return hit;
+    hit = inner;
+  }
+}
+/** The page selection, which is only reachable through composed ranges when
+ *  the editor lives inside a shadow root. */
+function selectionRange(editor: Editor): Range | null {
+  const sel = getSelection();
+  if (!sel?.rangeCount) return null;
+  const root = editor.getRootNode();
+  if (!(root instanceof ShadowRoot)) return sel.getRangeAt(0);
+  const composed = (
+    sel as Selection & {
+      getComposedRanges?: (options: {
+        shadowRoots: ShadowRoot[];
+      }) => StaticRange[];
+    }
+  ).getComposedRanges?.({ shadowRoots: [root] })[0];
+  if (!composed) return null;
+  const range = document.createRange();
+  range.setStart(composed.startContainer, composed.startOffset);
+  range.setEnd(composed.endContainer, composed.endOffset);
+  return range;
+}
+/** Splits identifiers such as "searchInput" or "cc-number" into words. */
+function words(...values: Array<string | null>) {
+  return values
+    .join(" ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .toLowerCase()
+    .split(/[^a-z]+/);
 }
 function isField(e: unknown): e is Editor {
   if (
     !(e instanceof HTMLElement) ||
     e.closest(
-      'quill-assistant,[data-quill="false"],pre,code,[role="spinbutton"]',
+      '[data-grammai-root],[data-quill="false"],pre,code,[role="spinbutton"]',
     ) ||
     ["numeric", "decimal", "tel"].includes(e.getAttribute("inputmode") || "") ||
     e.getAttribute("aria-disabled") === "true" ||
@@ -165,10 +221,34 @@ function isField(e: unknown): e is Editor {
       return false;
     if (e instanceof HTMLInputElement && !["text", ""].includes(e.type))
       return false;
+    // Match whole words: "tel" must not reject "Tell us more" or "title", nor
+    // "card" a "discard" id. Multi-line fields are never credentials or
+    // payment details, so only search boxes are excluded there.
+    const hints = words(
+      e.autocomplete,
+      e.name,
+      e.id,
+      e.getAttribute("aria-label"),
+    );
+    const sensitive =
+      e instanceof HTMLTextAreaElement
+        ? ["search"]
+        : [
+            "password",
+            "otp",
+            "cc",
+            "credit",
+            "card",
+            "username",
+            "email",
+            "address",
+            "tel",
+            "search",
+          ];
     if (
-      /password|one-time|cc-|credit|card|username|email|address|tel|search/i.test(
-        [e.autocomplete, e.name, e.id, e.getAttribute("aria-label")].join(" "),
-      )
+      hints.some((hint) => sensitive.includes(hint)) ||
+      (e instanceof HTMLInputElement &&
+        /one-time/i.test(e.autocomplete + e.name + e.id))
     )
       return false;
     // HTML type=text is also used for amounts, PINs and constrained number fields.
@@ -188,10 +268,20 @@ function isField(e: unknown): e is Editor {
   );
 }
 function fieldFrom(target: EventTarget | null): Editor | null {
-  if (!(target instanceof HTMLElement)) return null;
-  const field = target.closest(
-    'textarea,input,[contenteditable="true"],[contenteditable=""],[contenteditable="plaintext-only"]',
-  );
+  // Composed targets reach into our own shadow tree; its inputs are not drafts.
+  if (!(target instanceof Element) || target.getRootNode() === shadow)
+    return null;
+  const control = target.closest("textarea,input");
+  if (control) return isField(control) ? control : null;
+  // Climb to the editing host instead of matching attribute spellings, so
+  // contenteditable="TRUE" and inherited editability resolve the same way.
+  let field: HTMLElement | null = null;
+  for (let node: Element | null = target; node; node = node.parentElement) {
+    if (node instanceof HTMLElement && node.isContentEditable) field = node;
+    else if (field) break;
+  }
+  // designMode makes the root editable; its text must exclude <head>.
+  if (field === document.documentElement) field = document.body;
   return isField(field) ? field : null;
 }
 function read(e: Editor): string {
@@ -524,7 +614,6 @@ function render() {
 }
 function renderSurface() {
   host.dataset.theme = resolvedTheme(settings?.theme ?? "system");
-  host.style.colorScheme = host.dataset.theme;
   const editingPrompt = shadow.activeElement;
   if (
     session &&
@@ -912,7 +1001,7 @@ async function replace(editor: Editor, issue: Issue, replacement: string) {
       session?.editor !== editor ||
       !editor.isConnected ||
       read(editor) !== before ||
-      document.activeElement !== editor
+      focused() !== editor
     )
       return false;
   }
@@ -974,8 +1063,7 @@ async function replace(editor: Editor, issue: Issue, replacement: string) {
         session?.editor !== editor ||
         !enabled() ||
         !isField(editor) ||
-        (document.activeElement !== editor &&
-          !editor.contains(document.activeElement)) ||
+        (focused() !== editor && !editor.contains(focused())) ||
         read(editor) !== before
       )
         return false;
@@ -1110,6 +1198,13 @@ function position() {
     return;
   }
   const editor = session.editor;
+  // A transformed or filtered ancestor (possible once the overlay is mounted
+  // inside a dialog) becomes the containing block for fixed positioning.
+  // Shift the overlay back so viewport coordinates stay valid.
+  host.style.removeProperty("--grammai-shift");
+  const base = host.getBoundingClientRect();
+  if (base.left || base.top)
+    host.style.setProperty("--grammai-shift", `${-base.left}px ${-base.top}px`);
   const rect = editor.getBoundingClientRect();
   const inView =
     rect.width > 0 &&
@@ -1202,8 +1297,9 @@ function position() {
         wordTargets.push(target);
     }
     for (const r of issueRects(issue)) {
+      // Editors without padding end exactly at their last line of text.
       const y = r.bottom - 1;
-      if (y < rect.top || y > rect.bottom - 2 || y < 0 || y > innerHeight)
+      if (y < rect.top || y > rect.bottom + 1 || y < 0 || y > innerHeight)
         continue;
       const x = Math.max(r.left, rect.left);
       const right = Math.min(r.right, rect.right);
@@ -1271,7 +1367,7 @@ function updateWordHover(force = false) {
     clearWordHover();
     return;
   }
-  const hit = document.elementFromPoint(pointer.x, pointer.y);
+  const hit = hitAt(pointer.x, pointer.y);
   const overMark =
     hit === host &&
     shadow
@@ -1323,7 +1419,7 @@ function openWordSuggestion(event: MouseEvent) {
     event.shiftKey ||
     !session ||
     session.editor !== press.editor ||
-    fieldFrom(event.target) !== press.editor ||
+    fieldFrom(origin(event)) !== press.editor ||
     Math.hypot(event.clientX - press.x, event.clientY - press.y) > 5 ||
     read(press.editor) !== session.text
   )
@@ -1334,7 +1430,7 @@ function openWordSuggestion(event: MouseEvent) {
     press.editor instanceof HTMLInputElement
   ) {
     if (press.editor.selectionStart !== press.editor.selectionEnd) return;
-  } else if (getSelection()?.isCollapsed === false) return;
+  } else if (selectionRange(press.editor)?.collapsed === false) return;
   const target = wordTargets.find(
     (r) =>
       event.clientX >= r.left &&
@@ -1356,14 +1452,10 @@ function openWordSuggestion(event: MouseEvent) {
   position();
 }
 function rememberSelection(updateToolbar = true) {
-  if (!session || document.activeElement === host) return;
+  if (!session || focused() === host) return;
   const editor = session.editor;
   const previous = selection;
-  if (
-    document.activeElement !== editor &&
-    !editor.contains(document.activeElement)
-  )
-    return;
+  if (focused() !== editor && !editor.contains(focused())) return;
   if (
     editor instanceof HTMLTextAreaElement ||
     editor instanceof HTMLInputElement
@@ -1375,10 +1467,8 @@ function rememberSelection(updateToolbar = true) {
         ? { editor, text: read(editor), offset: start, length: end - start }
         : null;
   } else {
-    const sel = getSelection();
-    const offsets = sel?.rangeCount
-      ? selectedOffsets(editor, sel.getRangeAt(0))
-      : null;
+    const range = selectionRange(editor);
+    const offsets = range ? selectedOffsets(editor, range) : null;
     selection = offsets ? { editor, text: read(editor), ...offsets } : null;
   }
   if (
@@ -1405,19 +1495,19 @@ function positionSelectionActions() {
     !selection.text
       .slice(selection.offset, selection.offset + selection.length)
       .trim() ||
-    (document.activeElement !== session.editor &&
-      !session.editor.contains(document.activeElement) &&
-      document.activeElement !== host)
+    (focused() !== session.editor &&
+      !session.editor.contains(focused()) &&
+      focused() !== host)
   )
     return;
   // The saved range also supports clicking the toolbar without losing the selection.
-  if (document.activeElement !== host) {
+  if (focused() !== host) {
     if (
       session.editor instanceof HTMLTextAreaElement ||
       session.editor instanceof HTMLInputElement
     ) {
       if (session.editor.selectionStart === session.editor.selectionEnd) return;
-    } else if (getSelection()?.isCollapsed !== false) return;
+    } else if (selectionRange(session.editor)?.collapsed !== false) return;
   }
   const field = session.editor.getBoundingClientRect();
   const range =
@@ -1663,12 +1753,13 @@ async function start() {
     "focusin",
     (event) => {
       if (event.composedPath().includes(host)) return;
-      const field = fieldFrom(event.target);
+      const target = origin(event);
+      const field = fieldFrom(target);
       if (field) activate(field);
       else if (
-        event.target instanceof HTMLInputElement ||
-        event.target instanceof HTMLTextAreaElement ||
-        (event.target instanceof HTMLElement && event.target.isContentEditable)
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
       )
         deactivate();
       else {
@@ -1684,7 +1775,7 @@ async function start() {
     document,
     "input",
     (event) => {
-      const field = fieldFrom(event.target);
+      const field = fieldFrom(origin(event));
       if (field && !composing) {
         clearWordHover();
         activate(field);
@@ -1703,7 +1794,7 @@ async function start() {
         rememberSelection(false);
         return;
       }
-      const editor = fieldFrom(event.target);
+      const editor = fieldFrom(origin(event));
       if (editor !== session?.editor) {
         selection = null;
         selectionActions.replaceChildren();
@@ -1774,7 +1865,7 @@ async function start() {
       const ownControl = event.composedPath().includes(host);
       const editingPrompt =
         ownControl && shadow.activeElement?.closest(".prompt-manager");
-      const field = fieldFrom(event.target);
+      const field = fieldFrom(origin(event));
       const action =
         !editingPrompt && !composing && (field || ownControl)
           ? shortcutAction(event)
@@ -1838,13 +1929,13 @@ async function start() {
         return;
       }
       if (
-        fieldFrom(event.target) &&
+        fieldFrom(origin(event)) &&
         (/^(Arrow|Home|End)/.test(event.key) ||
           ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "a"))
       )
         selectionDismissed = false;
       if (
-        fieldFrom(event.target) &&
+        fieldFrom(origin(event)) &&
         (event.key.length === 1 ||
           ["Backspace", "Delete", "Enter"].includes(event.key))
       ) {
@@ -1864,7 +1955,7 @@ async function start() {
   );
   listen(document, "keyup", (event) => {
     if (
-      fieldFrom(event.target) &&
+      fieldFrom(origin(event)) &&
       (/^(Arrow|Home|End)/.test(event.key) ||
         ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "a"))
     )
@@ -1899,8 +1990,7 @@ async function start() {
         document.hasFocus() &&
         !shadow.activeElement?.closest(".prompt-manager") &&
         session &&
-        (fieldFrom(document.activeElement) === session.editor ||
-          document.activeElement === host) &&
+        (fieldFrom(focused()) === session.editor || focused() === host) &&
         isField(session.editor) &&
         enabled()
       ) {
@@ -1923,8 +2013,7 @@ async function start() {
         document.hasFocus() &&
         !shadow.activeElement?.closest(".prompt-manager") &&
         session &&
-        (fieldFrom(document.activeElement) === session.editor ||
-          document.activeElement === host) &&
+        (fieldFrom(focused()) === session.editor || focused() === host) &&
         isField(session.editor) &&
         enabled()
       ) {
@@ -2004,7 +2093,7 @@ async function start() {
       respond({ ok: true });
     }
   });
-  const current = fieldFrom(document.activeElement);
+  const current = fieldFrom(focused());
   if (current) activate(current);
 }
 start().catch(() => {

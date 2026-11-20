@@ -50,7 +50,7 @@ try {
     exact: true,
   });
   await draft.click();
-  const quill = page.locator("quill-assistant");
+  const quill = page.locator("[data-grammai-root]");
   await quill.locator(".underline").first().waitFor({ state: "attached" });
   await expect
     .poll(
@@ -217,7 +217,7 @@ try {
     .getByRole("textbox", { name: "Writing editor", exact: true })
     .click();
   await room
-    .locator("quill-assistant .underline")
+    .locator("[data-grammai-root] .underline")
     .first()
     .waitFor({ state: "attached" });
   pass("bundled writing room works without a local server");

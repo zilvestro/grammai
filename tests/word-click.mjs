@@ -35,7 +35,7 @@ try {
     name: "Writing editor",
     exact: true,
   });
-  const q = page.locator("quill-assistant");
+  const q = page.locator("[data-grammai-root]");
   await draft.fill("Is this really neseccary?");
   await draft.click();
   await q
@@ -50,7 +50,7 @@ try {
         const root = rich
           ? document.querySelector("#social")
           : document
-              .querySelector("quill-assistant")
+              .querySelector("[data-grammai-root]")
               .shadowRoot.querySelector(".text-mirror");
         const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
         let node;

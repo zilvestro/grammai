@@ -45,7 +45,7 @@ try {
   });
   await editor.fill("Is this really neseccary?");
   await editor.click();
-  const quill = page.locator("quill-assistant");
+  const quill = page.locator("[data-grammai-root]");
   await quill
     .getByRole("button", {
       name: "Possible spelling mistake: neseccary",
@@ -69,7 +69,7 @@ try {
   pass("extension is reloaded while the existing draft tab stays open");
   await page.evaluate(() => {
     const oldButton = document
-      .querySelector("quill-assistant")
+      .querySelector("[data-grammai-root]")
       ?.shadowRoot?.querySelector(".field-launcher");
     oldButton?.click();
     window.dispatchEvent(new Event("resize"));

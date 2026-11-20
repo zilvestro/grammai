@@ -91,7 +91,7 @@ try {
     name: "Draft editor",
     exact: true,
   });
-  const q = page.locator("quill-assistant");
+  const q = page.locator("[data-grammai-root]");
   await editor.click();
   await page.keyboard.press("ControlOrMeta+A");
   await expect(q.locator(".selection-actions")).toBeVisible();

@@ -52,7 +52,7 @@ try {
     name: "Writing editor",
     exact: true,
   });
-  const quill = page.locator("quill-assistant");
+  const quill = page.locator("[data-grammai-root]");
   await draft.fill("Is this really nessecary?");
   await draft.click();
   await quill

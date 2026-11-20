@@ -97,7 +97,7 @@ try {
   });
   const sentinel = "This is definately PRIVATE_DRAFT_SENTINEL_987.";
   await editor.fill(sentinel);
-  const assistant = page.locator("quill-assistant");
+  const assistant = page.locator("[data-grammai-root]");
   await expect(assistant.locator(".underline").first()).toBeVisible();
   await openAssistant(page, editor, assistant);
   const [feedback] = await Promise.all([

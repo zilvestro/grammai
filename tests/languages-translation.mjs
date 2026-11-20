@@ -67,7 +67,7 @@ try {
     name: "Writing editor",
     exact: true,
   });
-  const q = page.locator("quill-assistant");
+  const q = page.locator("[data-grammai-root]");
   await draft.click();
   await expect
     .poll(async () => {
