@@ -30,8 +30,13 @@ const output = path.resolve(
 const entries = {};
 const removed = [];
 const fixedTime = new Date("2020-01-01T00:00:00Z");
+// A hosted CI runner has no private identity: its home directory and account
+// are the generic, public "/home/runner" and "runner". Both occur in shipped
+// files anyway: the upstream WASM embeds its own CI build paths, and "runner"
+// is an ordinary dictionary word.
+const hosted = !!process.env.GITHUB_ACTIONS;
 const privateMarkers = [
-  homedir(),
+  hosted ? "" : homedir(),
   createHash("sha256")
     .update(root)
     .digest("hex")
@@ -49,12 +54,7 @@ const secretPatterns = [
   /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/,
   /\bAKIA[0-9A-Z]{16}\b/,
 ];
-// A hosted CI runner's account is the generic, public "runner": an ordinary
-// English word that also occurs in the bundled dictionaries. Its home
-// directory is still checked above.
-const localUser = process.env.GITHUB_ACTIONS
-  ? ""
-  : userInfo().username.toLowerCase();
+const localUser = hosted ? "" : userInfo().username.toLowerCase();
 let scanned = 0;
 function inspect(name, bytes, publicVocabulary = false) {
   scanned++;
