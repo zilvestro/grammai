@@ -74,7 +74,7 @@ try {
     name: "Writing editor",
     exact: true,
   });
-  const q = page.locator("quill-assistant");
+  const q = page.locator("[data-grammai-root]");
   await editor.fill("");
   await editor.hover();
   await expect(q.locator(".field-tools,.field-launcher")).toHaveCount(0);

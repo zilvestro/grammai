@@ -26,6 +26,7 @@
     "test:onboarding": "node tests/onboarding.mjs",
     "test:feedback": "node tests/feedback.mjs",
     "test:zero-install": "node tests/zero-install.mjs",
+    "test:hosts": "node tests/host-pages.mjs",
     "package:store": "npm run build && node scripts/package-store.mjs",
     "package:source": "node scripts/package-source.mjs"
   },

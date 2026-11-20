@@ -69,7 +69,7 @@ try {
     name: "Writing editor",
     exact: true,
   });
-  const q = page.locator("quill-assistant");
+  const q = page.locator("[data-grammai-root]");
   await editor.fill("We need neseccary changes.");
   await expect(q.locator(".underline").first()).toBeVisible();
   pass("English checking works immediately in a fresh extension profile");

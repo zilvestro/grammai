@@ -78,7 +78,7 @@ try {
     name: "Writing editor",
     exact: true,
   });
-  const q = page.locator("quill-assistant");
+  const q = page.locator("[data-grammai-root]");
   await editor.fill("This is definately DRAFT_SENTINEL_987.");
   await expect(q.locator(".underline").first()).toBeVisible();
   await openAssistant(page, editor, q);

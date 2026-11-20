@@ -1,0 +1,71 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Hostile page</title>
+<style>
+  html {
+    background: rgb(10, 20, 30);
+  }
+  /* Patterns seen on real sites that an injected overlay must survive. */
+  body > * {
+    background: rgb(255, 0, 0);
+    width: 100%;
+    height: 100%;
+    opacity: 0.5;
+    backdrop-filter: blur(20px);
+  }
+  body > div {
+    display: none;
+  }
+  :not(:defined) {
+    visibility: hidden;
+  }
+  body:has(:not(:defined)) {
+    opacity: 0;
+  }
+  main {
+    background: none;
+    height: auto;
+    opacity: 1;
+    backdrop-filter: none;
+  }
+  dialog {
+    top: 50%;
+    left: 50%;
+    margin: 0;
+    transform: translate(-50%, -50%);
+    width: 500px;
+    height: 300px;
+  }
+</style>
+<main>
+  <h1 id="heading">Visible heading</h1>
+  <textarea
+    id="plain"
+    aria-label="Tell us the title"
+    rows="4"
+    cols="60"
+  ></textarea>
+  <div id="upper" contenteditable="TRUE" aria-label="Uppercase editor"></div>
+  <div id="shadow-host"></div>
+  <button id="open">Open dialog</button>
+</main>
+<dialog id="dialog">
+  <textarea
+    id="in-dialog"
+    aria-label="Dialog message"
+    rows="4"
+    cols="40"
+  ></textarea>
+</dialog>
+<script>
+  const root = document
+    .querySelector("#shadow-host")
+    .attachShadow({ mode: "open" });
+  root.innerHTML =
+    '<textarea id="in-shadow" aria-label="Shadow message" rows="4" cols="60"></textarea>';
+  document
+    .querySelector("#open")
+    .addEventListener("click", () =>
+      document.querySelector("#dialog").showModal(),
+    );
+</script>

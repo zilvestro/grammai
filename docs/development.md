@@ -60,6 +60,7 @@ Browser tests use temporary profiles. Set `QUILL_BROWSER=helium` to use an insta
 npm run test:e2e
 npm run test:editors
 npm run test:feedback
+npm run test:hosts
 QUILL_BROWSER=helium npm run test:experience
 QUILL_BROWSER=helium npm run test:draft
 QUILL_BROWSER=helium npm run test:ux
@@ -81,6 +82,7 @@ GRAMMAI_EXTENSION_PATH=/absolute/path/to/extracted/package npm run test:feedback
 ```sh
 GRAMMAI_FEEDBACK_ENDPOINT=https://feedback.grammai.test/v1/feedback npm run build
 npm run test:feedback
+npm run test:hosts
 ```
 
 Run against both that `dist` build and its extracted Store ZIP to verify different installation IDs. Never publish a package built with the test endpoint. Worker unit tests run with `npm test`. See [feedback deployment](feedback.md) for the production setup.

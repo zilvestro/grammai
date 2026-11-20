@@ -101,7 +101,7 @@ try {
   pass(
     "all reported spelling/context mistakes appear together through real extension messages",
   );
-  const quill = page.locator("quill-assistant");
+  const quill = page.locator("[data-grammai-root]");
   await quill
     .getByRole("button", {
       name: "Possible spelling mistake: neseccary",
