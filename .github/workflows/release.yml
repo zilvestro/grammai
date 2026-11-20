@@ -1,0 +1,92 @@
+name: Release
+
+# A release happens when main carries a version that has no tag yet: bump the
+# version in a pull request (`npm version patch --no-git-tag-version`), merge
+# it, and this workflow tests, packages, submits the build to the Chrome Web
+# Store and publishes the GitHub release with the corresponding source.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      release: ${{ steps.version.outputs.release }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: version
+        run: |
+          version=$(node -p "require('./package.json').version")
+          manifest=$(node -p "require('./public/manifest.json').version")
+          lock=$(node -p "require('./package-lock.json').version")
+          if [ "$version" != "$manifest" ] || [ "$version" != "$lock" ]; then
+            echo "::error::Versions differ: package.json $version, manifest.json $manifest, package-lock.json $lock"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null; then
+            echo "v$version is already released; nothing to do."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  release:
+    needs: check
+    if: needs.check.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.check.outputs.version }}
+      CWS_ITEM_ID: coafchipjppaininmkchbiodpcdkkakc
+      CWS_PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
+      CWS_SERVICE_ACCOUNT_KEY: ${{ secrets.CWS_SERVICE_ACCOUNT_KEY }}
+    steps:
+      - name: Require Store credentials
+        run: |
+          if [ -z "$CWS_PUBLISHER_ID" ] || [ -z "$CWS_SERVICE_ACCOUNT_KEY" ]; then
+            echo "::error::Set the CWS_PUBLISHER_ID and CWS_SERVICE_ACCOUNT_KEY repository secrets (see docs/releasing.md)."
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: Package for the Chrome Web Store
+        run: node scripts/package-store.mjs --output "artifacts/grammai-$VERSION-chrome-store.zip"
+      - name: Package the corresponding source
+        run: |
+          curl --fail --silent --show-error --location \
+            --output "$RUNNER_TEMP/lingotweaker-0.2.8-source.tar.gz" \
+            https://codeload.github.com/fiduswriter/LingoTweaker/tar.gz/819dc354224c9087ff486708adfd413ecb45f466
+          node scripts/package-source.mjs \
+            --upstream "$RUNNER_TEMP/lingotweaker-0.2.8-source.tar.gz" \
+            --output "artifacts/grammai-$VERSION-source.zip"
+      - name: Submit to the Chrome Web Store
+        run: node scripts/publish-store.mjs "artifacts/grammai-$VERSION-chrome-store.zip"
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v$VERSION" \
+            "artifacts/grammai-$VERSION-chrome-store.zip" \
+            "artifacts/grammai-$VERSION-source.zip" \
+            --target "$GITHUB_SHA" \
+            --title "grammai $VERSION" \
+            --generate-notes

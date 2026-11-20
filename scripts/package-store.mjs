@@ -49,13 +49,19 @@ const secretPatterns = [
   /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/,
   /\bAKIA[0-9A-Z]{16}\b/,
 ];
+// A hosted CI runner's account is the generic, public "runner": an ordinary
+// English word that also occurs in the bundled dictionaries. Its home
+// directory is still checked above.
+const localUser = process.env.GITHUB_ACTIONS
+  ? ""
+  : userInfo().username.toLowerCase();
 let scanned = 0;
 function inspect(name, bytes, publicVocabulary = false) {
   scanned++;
   const lower = Buffer.from(bytes).toString("utf8").toLowerCase();
   if (
     privateMarkers.some((marker) => lower.includes(marker.toString())) ||
-    (!publicVocabulary && lower.includes(userInfo().username.toLowerCase()))
+    (!publicVocabulary && localUser && lower.includes(localUser))
   )
     throw new Error(
       `Private machine marker in ${name}; no archive was written.`,

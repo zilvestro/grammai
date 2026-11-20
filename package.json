@@ -28,7 +28,8 @@
     "test:zero-install": "node tests/zero-install.mjs",
     "test:hosts": "node tests/host-pages.mjs",
     "package:store": "npm run build && node scripts/package-store.mjs",
-    "package:source": "node scripts/package-source.mjs"
+    "package:source": "node scripts/package-source.mjs",
+    "version": "node scripts/sync-version.mjs && git add public/manifest.json"
   },
   "devDependencies": {
     "@types/chrome": "^0.1.24",
