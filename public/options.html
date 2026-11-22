@@ -161,23 +161,39 @@
               is sent to that provider. Live checking stays on device.
             </p>
             <label class="setting-row" for="ai-provider"
-              ><span class="setting-copy"
-                ><span class="setting-title">Rewrite provider</span
-                ><span class="setting-help"
-                  >Choose the AI tool for rewrites and translations.</span
-                ></span
-              ><select id="ai-provider">
-                <option value="auto">Automatic</option>
-                <option value="claude">Claude Code</option>
-                <option value="codex">Codex</option>
-              </select></label
-            >
+                ><span class="setting-copy"
+                  ><span class="setting-title">Rewrite provider</span>
+                  ><span class="setting-help"
+                    >Choose the AI tool for rewrites and translations.</span
+                  ></span
+                ><select id="ai-provider">
+                  <option value="auto">Automatic</option>
+                  <option value="claude">Claude Code</option>
+                  <option value="codex">Codex</option>
+                  <option value="custom">Custom API</option>
+                </select></label
+              >
+              <div id="custom-ai" class="setting-group" hidden>
+                <label class="setting-row" for="ai-base-url"
+                  ><span class="setting-copy"
+                    ><span class="setting-title">API Base URL</span>
+                    ><span class="setting-help">OpenAI-compatible endpoint base URL.</span></span
+                  ><input id="ai-base-url" class="text-input" type="text" placeholder="https://api.openai.com/v1" maxlength="512" autocomplete="off" spellcheck="false"
+                /></label>
+                <label class="setting-row" for="ai-api-key"
+                  ><span class="setting-copy"
+                    ><span class="setting-title">API Key</span>
+                    ><span class="setting-help">Your API key for the custom provider.</span></span
+                  ><input id="ai-api-key" class="text-input" type="password" placeholder="sk-..." maxlength="512" autocomplete="off" spellcheck="false"
+                /></label>
+              </div>
             <label class="setting-row ai-model-row" for="ai-model"
               ><span class="setting-copy"
                 ><span class="setting-title">Model (optional)</span
                 ><span class="setting-help"
-                  >Rewrites use this model or your CLI's default. Translation
-                  uses Haiku 5.5 or GPT-6 Luna for speed and cost.</span
+                                  >Custom API uses this model for both rewrites and translations.
+                                  With Claude Code or Codex, rewrites use this model or your CLI's
+                                  default; translation uses Haiku 5.5 or GPT-6 Luna.</span
                 ></span
               ><input
                 id="ai-model"

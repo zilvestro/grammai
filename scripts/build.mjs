@@ -27,7 +27,15 @@ await mkdir("dist", { recursive: true });
 await cp("public", "dist", { recursive: true });
 if (feedbackOrigin) {
   const manifest = JSON.parse(await readFile("dist/manifest.json", "utf8"));
-  manifest.host_permissions = [`${feedbackOrigin}/*`];
+  manifest.host_permissions = [
+    ...new Set([
+      ...(Array.isArray(manifest.host_permissions)
+        ? manifest.host_permissions
+        : []),
+      `${feedbackOrigin}/*`,
+      "<all_urls>",
+    ]),
+  ];
   manifest.content_security_policy.extension_pages += ` ${feedbackOrigin}`;
   await writeFile(
     "dist/manifest.json",

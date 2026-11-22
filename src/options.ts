@@ -14,6 +14,9 @@ const translatePartner =
   document.querySelector<HTMLSelectElement>("#translate-partner")!;
 const aiProvider = document.querySelector<HTMLSelectElement>("#ai-provider")!;
 const aiModel = document.querySelector<HTMLInputElement>("#ai-model")!;
+const aiApiKey = document.querySelector<HTMLInputElement>("#ai-api-key")!;
+const aiBaseUrl = document.querySelector<HTMLInputElement>("#ai-base-url")!;
+const customAiGroup = document.querySelector<HTMLElement>("#custom-ai")!;
 const aiTest = document.querySelector<HTMLButtonElement>("#ai-test")!;
 const aiStatus = document.querySelector<HTMLElement>("#ai-status")!;
 const categoryToggles = [
@@ -64,6 +67,9 @@ function render(): void {
   aiProvider.value = settings.aiProvider;
   // Keep an unfinished model edit when another preference changes.
   if (document.activeElement !== aiModel) aiModel.value = settings.aiModel;
+  if (aiApiKey && document.activeElement !== aiApiKey) aiApiKey.value = settings.aiApiKey;
+  if (aiBaseUrl && document.activeElement !== aiBaseUrl) aiBaseUrl.value = settings.aiBaseUrl;
+  if (customAiGroup) customAiGroup.hidden = settings.aiProvider !== "custom";
   for (const toggle of categoryToggles)
     toggle.checked = settings.categories[toggle.dataset.category as Category];
   dictionaryList.replaceChildren();
@@ -141,17 +147,48 @@ aiProvider.addEventListener("change", () => {
   aiStatus.textContent =
     "Provider saved. Test the connection to check availability.";
   aiStatus.classList.remove("error");
+  render();
 });
 aiModel.addEventListener("change", () => {
   aiModel.value = aiModel.value.trim();
   save({ aiModel: aiModel.value });
 });
+if (aiApiKey) {
+  aiApiKey.addEventListener("change", () => {
+    aiApiKey.value = aiApiKey.value.trim();
+    save({ aiApiKey: aiApiKey.value });
+  });
+}
+if (aiBaseUrl) {
+  aiBaseUrl.addEventListener("change", () => {
+    aiBaseUrl.value = aiBaseUrl.value.trim();
+    save({ aiBaseUrl: aiBaseUrl.value });
+  });
+}
 aiTest.addEventListener("click", async () => {
   aiTest.disabled = true;
   aiStatus.classList.remove("error");
-  aiStatus.textContent = "Checking your installed AI tools…";
+  aiStatus.textContent = "Checking connection…";
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
+    if (settings.aiProvider === "custom") {
+      if (!settings.aiApiKey || !settings.aiBaseUrl) {
+        throw new Error("Custom API key or base URL not set.");
+      }
+      const result = await chrome.runtime.sendMessage({
+        type: "CUSTOM_API_TEST",
+        baseUrl: settings.aiBaseUrl,
+        apiKey: settings.aiApiKey,
+        model: settings.aiModel,
+      });
+      if (!result?.ok)
+        throw new Error(result?.error || "Custom API test failed.");
+      aiStatus.textContent =
+        result.status ||
+        `Custom API reachable. Model '${settings.aiModel || "default"}' found.`;
+      aiStatus.classList.remove("error");
+      return;
+    }
     const response = (await Promise.race([
       chrome.runtime.sendMessage({ type: "AI_STATUS" }),
       new Promise<never>((_, reject) => {

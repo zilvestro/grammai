@@ -16,8 +16,10 @@ export interface Settings {
   /** Language that automatic translation uses for English text. */
   translatePartner: Exclude<WritingLanguage, "en">;
   categories: Record<Category, boolean>;
-  aiProvider: "auto" | "claude" | "codex";
+  aiProvider: "auto" | "claude" | "codex" | "custom";
   aiModel: string;
+  aiApiKey: string;
+  aiBaseUrl: string;
 }
 export const DEFAULT_SETTINGS: Settings = {
   theme: "system",
@@ -25,6 +27,8 @@ export const DEFAULT_SETTINGS: Settings = {
   enabled: true,
   aiProvider: "auto",
   aiModel: "",
+  aiApiKey: "",
+  aiBaseUrl: "",
   disabledSites: [],
   dictionary: [],
   dialect: "en-US",
