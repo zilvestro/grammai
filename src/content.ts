@@ -149,10 +149,13 @@ mirror.style.cssText =
   "position:fixed;visibility:hidden;pointer-events:none;white-space:pre-wrap;overflow:hidden;";
 shadow.append(mirror);
 function ensureHost() {
-  // Modal dialogs, popovers and fullscreen elements paint above every z-index
-  // and can make the rest of the page inert, so the overlay must live inside.
+  // Native top-layer elements can make the rest of the page inert. Framework
+  // dialogs (including messaging widgets) also keep focus inside their subtree,
+  // so our controls must live within that boundary instead of beside it.
   const parent =
-    session?.editor.closest("dialog:modal,:popover-open,:fullscreen") ??
+    session?.editor.closest(
+      'dialog:modal,:popover-open,:fullscreen,[role="dialog"],[role="alertdialog"]',
+    ) ??
     document.body ??
     document.documentElement;
   if (host.parentNode !== parent) parent.append(host);

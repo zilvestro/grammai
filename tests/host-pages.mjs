@@ -140,6 +140,85 @@ try {
       "Is this really necessary?",
   );
   pass("a field inside a transformed modal dialog is checked and corrected");
+  await page.evaluate(() => document.querySelector("#dialog").close());
+
+  // The supplied LinkedIn fields, dynamically mounted in a framework dialog.
+  // Unlike native <dialog>, these overlays implement their own focus boundary.
+  for (const [name, html] of [
+    [
+      "message widget",
+      '<div class="msg-form__contenteditable t-14 t-black--light t-normal flex-grow-1 full-height notranslate" contenteditable="true" role="textbox" dir="auto" aria-multiline="true" aria-label="Write a message…"><p><br></p></div>',
+    ],
+    [
+      "connection invitation",
+      '<textarea name="message" rows="2" placeholder="Ex: We know each other from…" id="custom-message" class="ember-text-area ember-view connect-button-send-invite__custom-message" minlength="1"></textarea>',
+    ],
+  ]) {
+    await page.evaluate((html) => {
+      const overlay = document.createElement("section");
+      overlay.id = "framework-dialog";
+      overlay.setAttribute("role", "dialog");
+      overlay.style.cssText =
+        "position:fixed;right:20px;bottom:20px;width:500px;height:350px;background:white;z-index:1000;transform:translateY(-10px)";
+      overlay.innerHTML = html;
+      const editor = overlay.firstElementChild;
+      editor.style.cssText =
+        "display:block;width:400px;min-height:150px;margin:20px;font:16px/1.5 Arial";
+      document.body.append(overlay);
+      const controller = new AbortController();
+      document.addEventListener(
+        "focusin",
+        (event) => {
+          if (!overlay.contains(event.target)) editor.focus();
+        },
+        { signal: controller.signal },
+      );
+      window.closeFixtureDialog = () => {
+        controller.abort();
+        overlay.remove();
+      };
+      editor.focus();
+    }, html);
+    const field = page
+      .locator("#framework-dialog")
+      .locator("[contenteditable],textarea");
+    await page.keyboard.type("Is this really neseccary?");
+    await mark("neseccary").waitFor();
+    await overlapsWord("neseccary", field);
+    await page.keyboard.press("Control+Shift+K");
+    assert.equal(
+      await q
+        .locator(".rewrite-choice")
+        .first()
+        .evaluate((el) => el.getRootNode().activeElement === el),
+      true,
+      `${name}: rewrite controls retain focus inside the dialog`,
+    );
+    await page.keyboard.press("Escape");
+    await mark("neseccary").first().click();
+    await q
+      .getByRole("button", { name: "Accept suggestion", exact: true })
+      .click();
+    assert.equal(
+      await field.evaluate((el) => el.value ?? el.innerText),
+      "Is this really necessary?",
+    );
+    await page.keyboard.press("Escape");
+    await page.evaluate(() => window.closeFixtureDialog());
+    pass(
+      `${name} supports checking, correction and keyboard controls in a framework dialog`,
+    );
+  }
+  // After a widget closes, the next editor must get a connected overlay again.
+  await plain.click();
+  await plain.fill("Is this really neseccary?");
+  await mark("neseccary").waitFor();
+  await overlapsWord("neseccary", plain);
+  assert.equal(
+    await q.evaluate((el) => el.parentElement === document.body),
+    true,
+  );
+  pass("overlay returns to the page after the widget closes");
   console.log(`${checks} host page checks passed.`);
 } finally {
   await context.close();
