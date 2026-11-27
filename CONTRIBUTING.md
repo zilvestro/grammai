@@ -1,5 +1,7 @@
 # Contributing to grammai
 
+**English** | [Français](CONTRIBUTING.fr.md)
+
 Thanks for helping make writing assistance easier to use.
 
 ## Start locally
